@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>猜数字小游戏</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4F46E5',
+                        secondary: '#10B981',
+                        warning: '#F59E0B',
+                        danger: '#EF4444',
+                    },
+                    fontFamily: {
+                        game: ['"Comic Sans MS"', '"Marker Felt"', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .animate-bounce-slow {
+                animation: bounce 2s infinite;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-50 to-purple-50 min-h-screen font-game flex flex-col items-center justify-center p-4">
+<div class="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden transform transition-all hover:shadow-2xl">
+    <!-- 游戏标题区 -->
+    <div class="bg-primary text-white p-6 text-center">
+        <h1 class="text-[clamp(1.5rem,5vw,2.5rem)] font-bold text-shadow">猜数字游戏</h1>
+        <p class="mt-2 opacity-90">Guess the Number</p>
+    </div>
+
+    <!-- 游戏说明区 -->
+    <div class="p-6 border-b border-gray-100">
+        <p class="text-gray-700 mb-3">
+            系统已生成一个<span class="font-bold text-primary">1-100</span>之间的随机数字，你有
+            <span class="font-bold text-danger" id="maxAttempts">10</span>次机会猜出它！
+        </p>
+        <div class="flex justify-between text-sm text-gray-500">
+            <div>已猜次数: <span id="attempts" class="font-bold text-primary">0</span></div>
+            <div>剩余次数: <span id="remaining" class="font-bold text-secondary">10</span></div>
+        </div>
+    </div>
+
+    <!-- 游戏交互区 -->
+    <div class="p-6">
+        <form id="guessForm" class="mb-6">
+            <div class="flex gap-3">
+                <input
+                        type="number"
+                        id="guessInput"
+                        min="1"
+                        max="100"
+                        placeholder="输入1-100之间的数字"
+                        class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                        required
+                >
+                <button type="submit" class="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg transition-all shadow-md hover:shadow-lg whitespace-nowrap">
+                    猜一猜 <i class="fa fa-search ml-1"></i>
+                </button>
+            </div>
+        </form>
+
+        <!-- 提示信息区 -->
+        <div id="message" class="mb-4 p-4 rounded-lg hidden"></div>
+
+        <!-- 历史记录区 -->
+        <div>
+            <h3 class="text-gray-700 font-bold mb-2 flex items-center">
+                <i class="fa fa-history mr-2 text-primary"></i> 历史记录
+            </h3>
+            <div id="history" class="h-32 overflow-y-auto p-3 bg-gray-50 rounded-lg text-gray-600 text-sm space-y-1">
+                <div class="text-gray-400 italic text-center">暂无记录</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 重置按钮区 -->
+    <div class="p-4 bg-gray-50 flex justify-center">
+        <button id="resetBtn" class="hidden bg-secondary hover:bg-secondary/90 text-white px-6 py-2 rounded-lg transition-all shadow hover:shadow-md">
+            再来一局 <i class="fa fa-refresh ml-1"></i>
+        </button>
+    </div>
+</div>
+
+<!-- 底部信息 -->
+<p class="mt-6 text-gray-500 text-sm text-center">
+    用简单代码打造的小游戏 | 祝你玩得开心！
+</p>
+
+<script>
+    // 游戏核心变量
+    let secretNumber;       // 随机生成的目标数字
+    let attempts = 0;       // 已尝试次数
+    const maxAttempts = 10; // 最大尝试次数
+    let gameActive = true;  // 游戏是否正在进行
+
+    // DOM元素
+    const guessForm = document.getElementById('guessForm');
+    const guessInput = document.getElementById('guessInput');
+    const message = document.getElementById('message');
+    const history = document.getElementById('history');
+    const attemptsEl = document.getElementById('attempts');
+    const remainingEl = document.getElementById('remaining');
+    const resetBtn = document.getElementById('resetBtn');
+
+    // 初始化游戏
+    function initGame() {
+        // 生成1-100的随机数
+        secretNumber = Math.floor(Math.random() * 100) + 1;
+        attempts = 0;
+        gameActive = true;
+
+        // 重置UI
+        attemptsEl.textContent = '0';
+        remainingEl.textContent = maxAttempts;
+        message.classList.add('hidden');
+        history.innerHTML = '<div class="text-gray-400 italic text-center">暂无记录</div>';
+        guessInput.value = '';
+        guessInput.disabled = false;
+        resetBtn.classList.add('hidden');
+
+        // 自动聚焦输入框
+        guessInput.focus();
+
+        // 控制台调试用（实际游戏中可删除）
+        console.log('调试信息：目标数字是', secretNumber);
+    }
+
+    // 显示消息
+    function showMessage(text, type) {
+        // 清除之前的样式
+        message.classList.remove('bg-green-100', 'text-green-800',
+                               'bg-yellow-100', 'text-yellow-800',
+                               'bg-red-100', 'text-red-800',
+                               'hidden');
+
+        // 添加新样式
+        switch(type) {
+            case 'success':
+                message.classList.add('bg-green-100', 'text-green-800');
+                break;
+            case 'warning':
+                message.classList.add('bg-yellow-100', 'text-yellow-800');
+                break;
+            case 'error':
+                message.classList.add('bg-red-100', 'text-red-800');
+                break;
+        }
+
+        message.textContent = text;
+        message.classList.remove('hidden');
+    }
+
+    // 添加历史记录
+    function addToHistory(guess, result) {
+        // 如果是第一条记录，清除"暂无记录"提示
+        if (history.querySelector('.italic')) {
+            history.innerHTML = '';
+        }
+
+        // 创建记录元素
+        const record = document.createElement('div');
+        record.className = 'flex justify-between items-center';
+
+        // 根据结果添加不同样式
+        let resultText, resultClass;
+        switch(result) {
+            case 'high':
+                resultText = '太大了';
+                resultClass = 'text-danger';
+                break;
+            case 'low':
+                resultText = '太小了';
+                resultClass = 'text-warning';
+                break;
+            case 'correct':
+                resultText = '猜对了！';
+                resultClass = 'text-secondary font-bold';
+                break;
+        }
+
+        record.innerHTML = `
+            第${attempts}次: 猜了 ${guess}
+            <span class="${resultClass}">${resultText}</span>
+        `;
+
+        // 添加到历史记录顶部
+        history.prepend(record);
+    }
+
+    // 处理猜测
+    function handleGuess(e) {
+        e.preventDefault();
+
+        if (!gameActive) return;
+
+        const guess = parseInt(guessInput.value);
+
+        // 验证输入
+        if (isNaN(guess) || guess < 1 || guess > 100) {
+            showMessage('请输入1-100之间的有效数字！', 'error');
+            return;
+        }
+
+        // 增加尝试次数
+        attempts++;
+
+        // 更新UI
+        attemptsEl.textContent = attempts;
+        remainingEl.textContent = maxAttempts - attempts;
+
+        // 判断猜测结果
+        if (guess === secretNumber) {
+            // 猜对了
+            showMessage(`恭喜你！用了${attempts}次就猜对了正确答案是${secretNumber}！`, 'success');
+            addToHistory(guess, 'correct');
+            endGame(true);
+        } else if (attempts >= maxAttempts) {
+            // 次数用完
+            showMessage(`游戏结束！你已用完所有次数，正确答案是${secretNumber}`, 'error');
+            addToHistory(guess, guess > secretNumber ? 'high' : 'low');
+            endGame(false);
+        } else if (guess > secretNumber) {
+            // 猜大了
+            showMessage('猜大了！再试试小一点的数字', 'warning');
+            addToHistory(guess, 'high');
+        } else {
+            // 猜小了
+            showMessage('猜小了！再试试大一点的数字', 'warning');
+            addToHistory(guess, 'low');
+        }
+
+        // 清空输入框并聚焦
+        guessInput.value = '';
+        guessInput.focus();
+    }
+
+    // 结束游戏
+    function endGame(isWinner) {
+        gameActive = false;
+        guessInput.disabled = true;
+        resetBtn.classList.remove('hidden');
+
+        // 如果赢了，添加庆祝动画
+        if (isWinner) {
+            message.classList.add('animate-bounce-slow');
+        }
+    }
+
+    // 事件监听
+    guessForm.addEventListener('submit', handleGuess);
+    resetBtn.addEventListener('click', initGame);
+
+    // 初始化游戏
+    initGame();
+</script>
+</body>
+</html>

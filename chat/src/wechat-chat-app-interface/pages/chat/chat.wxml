@@ -1,0 +1,124 @@
+<!-- pages/chat/chat.wxml -->
+<view class="container">
+  <!-- 消息区域 -->
+  <scroll-view 
+    class="message-container" 
+    scroll-y 
+    scroll-with-animation
+    scroll-top="{{scrollTop}}"
+    bindscrolltolower="loadMoreHistory"
+  >
+    <!-- 加载历史消息提示 -->
+    <view class="loading-history" wx:if="{{loadingHistory}}">
+      <van-loading size="20" color="#999" />
+      <text>加载历史消息...</text>
+    </view>
+    
+    <!-- 消息列表 -->
+    <view class="message-list">
+      <!-- 时间分割线 -->
+      <view class="time-divider" wx:if="{{showTimeDivider}}">
+        {{today ? '今天' : formatDate(currentDate)}}
+      </view>
+      
+      <!-- 对方的消息 -->
+      <view 
+        class="message-item left" 
+        wx:for="{{messages}}" 
+        wx:key="id"
+        wx:if="{{item.fromUserId === toUserId}}"
+      >
+        <image 
+          class="avatar" 
+          src="{{toUserAvatar}}" 
+          mode="widthFix"
+        ></image>
+        <view class="message-content">
+          <text class="text">{{item.content}}</text>
+        </view>
+        <text class="message-time">{{item.timeText}}</text>
+      </view>
+      
+      <!-- 自己的消息 -->
+      <view 
+        class="message-item right" 
+        wx:for="{{messages}}" 
+        wx:key="id"
+        wx:if="{{item.fromUserId === currentUserId}}"
+      >
+        <text class="message-time">{{item.timeText}}</text>
+        <view class="message-content">
+          <text class="text">{{item.content}}</text>
+        </view>
+        <image 
+          class="avatar" 
+          src="{{currentUserAvatar}}" 
+          mode="widthFix"
+        ></image>
+      </view>
+      
+      <!-- 图片消息示例 -->
+      <view 
+        class="message-item left" 
+        wx:for="{{imageMessages}}" 
+        wx:key="id"
+        wx:if="{{item.fromUserId === toUserId}}"
+      >
+        <image 
+          class="avatar" 
+          src="{{toUserAvatar}}" 
+          mode="widthFix"
+        ></image>
+        <view class="message-content image-content">
+          <image src="{{item.content}}" mode="widthFix"></image>
+        </view>
+        <text class="message-time">{{item.timeText}}</text>
+      </view>
+    </view>
+  </scroll-view>
+  
+  <!-- 输入区域 -->
+  <view class="input-area">
+    <view class="tool-bar">
+      <view class="tool-item" bindtap="toggleEmojiPanel">
+        <i class="iconfont icon-emoji"></i>
+      </view>
+      <view class="tool-item" bindtap="chooseImage">
+        <i class="iconfont icon-image"></i>
+      </view>
+      <view class="tool-item">
+        <i class="iconfont icon-voice"></i>
+      </view>
+      <view class="tool-item">
+        <i class="iconfont icon-more"></i>
+      </view>
+    </view>
+    
+    <!-- 表情面板 -->
+    <view class="emoji-panel" wx:if="{{showEmoji}}">
+      <view class="emoji-grid">
+        <view class="emoji-item" wx:for="{{emojis}}" wx:key="index" bindtap="selectEmoji" data-emoji="{{item}}">
+          {{item}}
+        </view>
+      </view>
+    </view>
+    
+    <view class="input-container">
+      <input 
+        class="message-input" 
+        placeholder="输入消息..." 
+        value="{{inputValue}}"
+        bindinput="onInputChange"
+        bindconfirm="sendMessage"
+      />
+      <button 
+        class="send-btn" 
+        bindtap="sendMessage"
+        disabled="{{!inputValue.trim()}}"
+      >
+        发送
+      </button>
+    </view>
+  </view>
+</view>
+    

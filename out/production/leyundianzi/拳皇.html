@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简化版拳皇</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Arial', sans-serif;
+            color: white;
+        }
+        .game-container {
+            position: relative;
+        }
+        #gameCanvas {
+            border: 4px solid #ffcc00;
+            background-color: #2d2d2d;
+            background-image: url('https://picsum.photos/id/237/800/450');
+            background-size: cover;
+            background-position: center;
+        }
+        .hud {
+            display: flex;
+            justify-content: space-between;
+            width: 800px;
+            padding: 10px;
+            background-color: #333;
+            border: 2px solid #ffcc00;
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+        }
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .player-name {
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .health-bar {
+            width: 250px;
+            height: 20px;
+            background-color: #666;
+            border: 2px solid #fff;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .health {
+            height: 100%;
+            background-color: #ff3333;
+            transition: width 0.2s ease;
+        }
+        .timer {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffcc00;
+        }
+        .controls {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            width: 800px;
+        }
+        .control-panel {
+            background-color: #333;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .control-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #ffcc00;
+        }
+        .control-list {
+            list-style: none;
+            padding: 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .control-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .key {
+            background-color: #555;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .game-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            font-weight: bold;
+            color: #ffcc00;
+            text-shadow: 0 0 10px #000;
+            display: none;
+        }
+        .btn {
+            margin-top: 20px;
+            background-color: #ffcc00;
+            color: #333;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn:hover {
+            background-color: #ffdd55;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="hud">
+            <div class="player-info">
+                <div class="player-name">草薙京 (P1)</div>
+                <div class="health-bar">
+                    <div id="p1Health" class="health" style="width: 100%;"></div>
+                </div>
+            </div>
+            <div class="timer" id="timer">99</div>
+            <div class="player-info">
+                <div class="health-bar">
+                    <div id="p2Health" class="health" style="width: 100%;"></div>
+                </div>
+                <div class="player-name">八神庵 (P2)</div>
+            </div>
+        </div>
+        <canvas id="gameCanvas" width="800" height="450"></canvas>
+        <div class="game-message" id="message"></div>
+    </div>
+    <div class="controls">
+        <div class="control-panel">
+            <div class="control-title">玩家1 (草薙京)</div>
+            <ul class="control-list">
+                <li class="control-item"><span class="key">W</span> 上跳</li>
+                <li class="control-item"><span class="key">S</span> 下蹲</li>
+                <li class="control-item"><span class="key">A</span> 左移</li>
+                <li class="control-item"><span class="key">D</span> 右移</li>
+                <li class="control-item"><span class="key">J</span> 轻拳</li>
+                <li class="control-item"><span class="key">K</span> 重拳</li>
+                <li class="control-item"><span class="key">L</span> 必杀技(需要能量)</li>
+            </ul>
+        </div>
+        <div class="control-panel">
+            <div class="control-title">玩家2 (八神庵)</div>
+            <ul class="control-list">
+                <li class="control-item"><span class="key">↑</span> 上跳</li>
+                <li class="control-item"><span class="key">↓</span> 下蹲</li>
+                <li class="control-item"><span class="key">←</span> 左移</li>
+                <li class="control-item"><span class="key">→</span> 右移</li>
+                <li class="control-item"><span class="key">1</span> 轻拳</li>
+                <li class="control-item"><span class="key">2</span> 重拳</li>
+                <li class="control-item"><span class="key">3</span> 必杀技(需要能量)</li>
+            </ul>
+        </div>
+    </div>
+    <button class="btn" onclick="startGame()">开始游戏</button>
+
+    <script>
+        // 获取画布和上下文
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 游戏状态
+        let gameRunning = false;
+        let timer = 99;
+        let timerInterval;
+        let gameOver = false;
+        
+        // 玩家1 (草薙京)
+        const p1 = {
+            x: 150,
+            y: 320,
+            width: 50,
+            height: 130,
+            speed: 5,
+            jumpSpeed: 15,
+            gravity: 0.8,
+            velocityY: 0,
+            isJumping: false,
+            isCrouching: false,
+            direction: 'right', // 面向方向
+            health: 100,
+            energy: 0, // 能量值，用于释放必杀技
+            isAttacking: false,
+            attackCooldown: 0,
+            isHit: false,
+            hitCooldown: 0
+        };
+        
+        // 玩家2 (八神庵)
+        const p2 = {
+            x: 600,
+            y: 320,
+            width: 50,
+            height: 130,
+            speed: 5,
+            jumpSpeed: 15,
+            gravity: 0.8,
+            velocityY: 0,
+            isJumping: false,
+            isCrouching: false,
+            direction: 'left', // 面向方向
+            health: 100,
+            energy: 0,
+            isAttacking: false,
+            attackCooldown: 0,
+            isHit: false,
+            hitCooldown: 0
+        };
+        
+        // 攻击碰撞检测区域
+        let attacks = [];
+        
+        // 特效
+        let effects = [];
+        
+        // 键盘控制
+        const keys = {
+            // 玩家1控制
+            w: false,
+            s: false,
+            a: false,
+            d: false,
+            j: false,
+            k: false,
+            l: false,
+            
+            // 玩家2控制
+            up: false,
+            down: false,
+            left: false,
+            right: false,
+            num1: false,
+            num2: false,
+            num3: false
+        };
+        
+        // 初始化游戏
+        function initGame() {
+            // 重置玩家状态
+            p1.x = 150;
+            p1.y = 320;
+            p1.health = 100;
+            p1.energy = 0;
+            p1.isJumping = false;
+            p1.velocityY = 0;
+            
+            p2.x = 600;
+            p2.y = 320;
+            p2.health = 100;
+            p2.energy = 0;
+            p2.isJumping = false;
+            p2.velocityY = 0;
+            
+            // 重置游戏状态
+            timer = 99;
+            gameOver = false;
+            attacks = [];
+            effects = [];
+            document.getElementById('p1Health').style.width = '100%';
+            document.getElementById('p2Health').style.width = '100%';
+            document.getElementById('timer').textContent = '99';
+            document.getElementById('message').style.display = 'none';
+        }
+        
+        // 绘制玩家
+        function drawPlayer(player, isP1) {
+            ctx.save();
+            
+            // 被击中闪烁效果
+            if (player.isHit && Math.floor(Date.now() / 100) % 2 === 0) {
+                ctx.globalAlpha = 0.5;
+            }
+            
+            // 绘制玩家主体
+            ctx.fillStyle = isP1 ? '#ff6600' : '#660066';
+            
+            // 站立状态
+            if (!player.isCrouching && !player.isJumping) {
+                ctx.fillRect(player.x, player.y, player.width, player.height);
+                
+                // 头部
+                ctx.fillStyle = '#ffcc99';
+                ctx.beginPath();
+                ctx.arc(player.x + player.width / 2, player.y + 20, 15, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 面向方向的手臂
+                ctx.fillStyle = isP1 ? '#ff6600' : '#660066';
+                if (player.direction === 'right') {
+                    ctx.fillRect(player.x + player.width, player.y + 40, 20, 10);
+                } else {
+                    ctx.fillRect(player.x - 20, player.y + 40, 20, 10);
+                }
+            }
+            // 下蹲状态
+            else if (player.isCrouching) {
+                ctx.fillRect(player.x, player.y + 50, player.width, player.height - 50);
+                
+                // 头部
+                ctx.fillStyle = '#ffcc99';
+                ctx.beginPath();
+                ctx.arc(player.x + player.width / 2, player.y + 40, 15, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            // 跳跃状态
+            else if (player.isJumping) {
+                ctx.fillRect(player.x, player.y, player.width, player.height);
+                
+                // 头部
+                ctx.fillStyle = '#ffcc99';
+                ctx.beginPath();
+                ctx.arc(player.x + player.width / 2, player.y + 20, 15, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 腿部弯曲
+                ctx.fillStyle = isP1 ? '#ff6600' : '#660066';
+                ctx.fillRect(player.x + 10, player.y + player.height, 15, 10);
+                ctx.fillRect(player.x + 25, player.y + player.height - 5, 15, 10);
+            }
+            
+            // 攻击动作
+            if (player.isAttacking) {
+                ctx.fillStyle = isP1 ? '#ff9900' : '#990099';
+                if (player.direction === 'right') {
+                    ctx.fillRect(player.x + player.width, player.y + 30, 30, 20);
+                } else {
+                    ctx.fillRect(player.x - 30, player.y + 30, 30, 20);
+                }
+            }
+            
+            // 能量条
+            ctx.fillStyle = '#00ccff';
+            ctx.fillRect(player.x, player.y - 10, (player.width * player.energy) / 100, 5);
+            
+            ctx.restore();
+        }
+        
+        // 绘制攻击特效
+        function drawAttacks() {
+            attacks.forEach(attack => {
+                ctx.save();
+                ctx.fillStyle = attack.isP1 ? '#ffcc00' : '#ff00ff';
+                
+                if (attack.type === 'light') {
+                    ctx.fillRect(attack.x, attack.y, attack.width, attack.height);
+                } else if (attack.type === 'heavy') {
+                    ctx.fillRect(attack.x, attack.y, attack.width, attack.height);
+                    // 重攻击特效
+                    ctx.fillStyle = attack.isP1 ? '#ff9900' : '#cc00cc';
+                    ctx.fillRect(attack.x + 5, attack.y + 5, attack.width - 10, attack.height - 10);
+                } else if (attack.type === 'special') {
+                    // 必杀技特效
+                    const gradient = ctx.createLinearGradient(attack.x, attack.y, attack.x + attack.width, attack.y);
+                    gradient.addColorStop(0, attack.isP1 ? '#ff6600' : '#990099');
+                    gradient.addColorStop(1, attack.isP1 ? '#ffcc00' : '#ff00ff');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(attack.x, attack.y, attack.width, attack.height);
+                    
+                    // 粒子效果
+                    effects.forEach(effect => {
+                        if (effect.type === 'special' && effect.owner === attack.isP1) {
+                            ctx.fillStyle = effect.color;
+                            ctx.beginPath();
+                            ctx.arc(effect.x, effect.y, effect.size, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                    });
+                }
+                ctx.restore();
+            });
+        }
+        
+        // 处理玩家移动
+        function movePlayer(player, controls) {
+            // 重置状态
+            player.isCrouching = false;
+            
+            // 水平移动
+            if (controls.left) {
+                player.x -= player.speed;
+                player.direction = 'left';
+            }
+            if (controls.right) {
+                player.x += player.speed;
+                player.direction = 'right';
+            }
+            
+            // 跳跃
+            if (controls.up && !player.isJumping) {
+                player.isJumping = true;
+                player.velocityY = -player.jumpSpeed;
+            }
+            
+            // 下蹲
+            if (controls.down) {
+                player.isCrouching = true;
+            }
+            
+            // 应用重力
+            if (player.isJumping) {
+                player.velocityY += player.gravity;
+                player.y += player.velocityY;
+                
+                // 落地检测
+                if (player.y >= 320) {
+                    player.y = 320;
+                    player.isJumping = false;
+                    player.velocityY = 0;
+                }
+            }
+            
+            // 边界检测
+            if (player.x < 0) player.x = 0;
+            if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+        }
+        
+        // 处理攻击
+        function handleAttacks() {
+            // 玩家1攻击
+            if (keys.j && p1.attackCooldown === 0 && !gameOver) {
+                lightAttack(p1, true);
+            }
+            if (keys.k && p1.attackCooldown === 0 && !gameOver) {
+                heavyAttack(p1, true);
+            }
+            if (keys.l && p1.energy >= 100 && p1.attackCooldown === 0 && !gameOver) {
+                specialAttack(p1, true);
+                p1.energy = 0; // 消耗全部能量
+            }
+            
+            // 玩家2攻击
+            if (keys.num1 && p2.attackCooldown === 0 && !gameOver) {
+                lightAttack(p2, false);
+            }
+            if (keys.num2 && p2.attackCooldown === 0 && !gameOver) {
+                heavyAttack(p2, false);
+            }
+            if (keys.num3 && p2.energy >= 100 && p2.attackCooldown === 0 && !gameOver) {
+                specialAttack(p2, false);
+                p2.energy = 0; // 消耗全部能量
+            }
+            
+            // 更新攻击冷却
+            if (p1.attackCooldown > 0) p1.attackCooldown--;
+            if (p2.attackCooldown > 0) p2.attackCooldown--;
+            
+            // 更新被击中冷却
+            if (p1.hitCooldown > 0) {
+                p1.hitCooldown--;
+                if (p1.hitCooldown === 0) p1.isHit = false;
+            }
+            if (p2.hitCooldown > 0) {
+                p2.hitCooldown--;
+                if (p2.hitCooldown === 0) p2.isHit = false;
+            }
+            
+            // 移动攻击区域
+            for (let i = attacks.length - 1; i >= 0; i--) {
+                const attack = attacks[i];
+                attack.lifetime--;
+                
+                // 根据方向移动攻击区域
+                if (attack.direction === 'right') {
+                    attack.x += attack.speed;
+                } else {
+                    attack.x -= attack.speed;
+                }
+                
+                // 攻击生命周期结束或出界
+                if (attack.lifetime <= 0 || attack.x < 0 || attack.x > canvas.width) {
+                    attacks.splice(i, 1);
+                    continue;
+                }
+                
+                // 检测攻击是否命中
+                const target = attack.isP1 ? p2 : p1;
+                if (checkCollision(attack, target) && !target.isHit) {
+                    // 命中目标
+                    target.health -= attack.damage;
+                    target.isHit = true;
+                    target.hitCooldown = 20;
+                    
+                    // 击退效果
+                    if (attack.type === 'heavy' || attack.type === 'special') {
+                        target.x += attack.isP1 ? 20 : -20;
+                    }
+                    
+                    // 更新生命值UI
+                    if (attack.isP1) {
+                        document.getElementById('p2Health').style.width = `${p2.health}%`;
+                    } else {
+                        document.getElementById('p1Health').style.width = `${p1.health}%`;
+                    }
+                    
+                    // 添加击中特效
+                    addEffect(target.x + target.width / 2, target.y + target.height / 2, 'hit', attack.isP1);
+                    
+                    // 增加攻击者能量
+                    if (attack.isP1) {
+                        p1.energy = Math.min(100, p1.energy + (attack.type === 'special' ? 0 : 10));
+                    } else {
+                        p2.energy = Math.min(100, p2.energy + (attack.type === 'special' ? 0 : 10));
+                    }
+                    
+                    // 移除攻击（命中后消失）
+                    if (attack.type !== 'special') {
+                        attacks.splice(i, 1);
+                    }
+                    
+                    // 检查是否KO
+                    checkKO();
+                }
+            }
+            
+            // 更新特效
+            for (let i = effects.length - 1; i >= 0; i--) {
+                const effect = effects[i];
+                effect.lifetime--;
+                
+                if (effect.type === 'hit') {
+                    effect.size += 0.5;
+                    effect.alpha -= 0.05;
+                } else if (effect.type === 'special') {
+                    effect.x += effect.vx;
+                    effect.y += effect.vy;
+                    effect.size *= 0.95;
+                    effect.alpha -= 0.03;
+                }
+                
+                if (effect.lifetime <= 0 || effect.alpha <= 0) {
+                    effects.splice(i, 1);
+                }
+            }
+        }
+        
+        // 轻攻击
+        function lightAttack(player, isP1) {
+            player.isAttacking = true;
+            player.attackCooldown = 15; // 冷却帧数
+            
+            // 攻击区域
+            const attack = {
+                x: player.direction === 'right' ? player.x + player.width : player.x - 20,
+                y: player.y + 40,
+                width: 20,
+                height: 40,
+                damage: 5,
+                speed: 8,
+                direction: player.direction,
+                isP1: isP1,
+                type: 'light',
+                lifetime: 5
+            };
+            
+            attacks.push(attack);
+            
+            // 攻击动画结束后重置状态
+            setTimeout(() => {
+                player.isAttacking = false;
+            }, 200);
+        }
+        
+        // 重攻击
+        function heavyAttack(player, isP1) {
+            player.isAttacking = true;
+            player.attackCooldown = 30; // 更长的冷却
+            
+            const attack = {
+                x: player.direction === 'right' ? player.x + player.width : player.x - 30,
+                y: player.y + 30,
+                width: 30,
+                height: 60,
+                damage: 10,
+                speed: 6,
+                direction: player.direction,
+                isP1: isP1,
+                type: 'heavy',
+                lifetime: 7
+            };
+            
+            attacks.push(attack);
+            
+            setTimeout(() => {
+                player.isAttacking = false;
+            }, 300);
+        }
+        
+        // 必杀技
+        function specialAttack(player, isP1) {
+            player.isAttacking = true;
+            player.attackCooldown = 60; // 很长的冷却
+            
+            const attackWidth = 150;
+            const attack = {
+                x: player.direction === 'right' ? player.x + player.width : player.x - attackWidth,
+                y: player.y + 10,
+                width: attackWidth,
+                height: 100,
+                damage: 25,
+                speed: 10,
+                direction: player.direction,
+                isP1: isP1,
+                type: 'special',
+                lifetime: 15
+            };
+            
+            attacks.push(attack);
+            
+            // 添加必杀技特效粒子
+            for (let i = 0; i < 30; i++) {
+                addEffect(attack.x, attack.y + 50, 'special', isP1);
+            }
+            
+            setTimeout(() => {
+                player.isAttacking = false;
+            }, 500);
+        }
+        
+        // 添加特效
+        function addEffect(x, y, type, isP1) {
+            if (type === 'hit') {
+                effects.push({
+                    x: x,
+                    y: y,
+                    size: 5,
+                    alpha: 1,
+                    type: type,
+                    lifetime: 20
+                });
+            } else if (type === 'special') {
+                effects.push({
+                    x: x,
+                    y: y,
+                    size: Math.random() * 8 + 4,
+                    alpha: 1,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6,
+                    color: isP1 ? '#ff6600' : '#990099',
+                    type: type,
+                    owner: isP1,
+                    lifetime: 50
+                });
+            }
+        }
+        
+        // 碰撞检测
+        function checkCollision(attack, target) {
+            return attack.x < target.x + target.width &&
+                   attack.x + attack.width > target.x &&
+                   attack.y < target.y + target.height &&
+                   attack.y + attack.height > target.y;
+        }
+        
+        // 检查KO
+        function checkKO() {
+            if (p1.health <= 0) {
+                endGame('玩家2 胜利!');
+            } else if (p2.health <= 0) {
+                endGame('玩家1 胜利!');
+            }
+        }
+        
+        // 游戏主循环
+        function gameLoop() {
+            if (!gameRunning) return;
+            
+            // 清空画布
+            ctx.fillStyle = '#2d2d2d';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制背景
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 移动玩家
+            movePlayer(p1, {
+                left: keys.a,
+                right: keys.d,
+                up: keys.w,
+                down: keys.s
+            });
+            
+            movePlayer(p2, {
+                left: keys.left,
+                right: keys.right,
+                up: keys.up,
+                down: keys.down
+            });
+            
+            // 处理攻击
+            handleAttacks();
+            
+            // 绘制玩家
+            drawPlayer(p1, true);
+            drawPlayer(p2, false);
+            
+            // 绘制攻击
+            drawAttacks();
+            
+            // 继续循环
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // 开始游戏
+        function startGame() {
+            initGame();
+            gameRunning = true;
+            
+            // 启动计时器
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if (gameRunning && !gameOver) {
+                    timer--;
+                    document.getElementById('timer').textContent = timer;
+                    
+                    if (timer <= 0) {
+                        // 时间到，生命值高的获胜
+                        const winner = p1.health > p2.health ? '玩家1 胜利!' : '玩家2 胜利!';
+                        endGame(winner);
+                    }
+                }
+            }, 1000);
+            
+            gameLoop();
+        }
+        
+        // 结束游戏
+        function endGame(message) {
+            gameRunning = false;
+            gameOver = true;
+            clearInterval(timerInterval);
+            document.getElementById('message').textContent = message;
+            document.getElementById('message').style.display = 'block';
+        }
+        
+        // 键盘事件监听
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                // 玩家1控制
+                case 'w': keys.w = true; break;
+                case 's': keys.s = true; break;
+                case 'a': keys.a = true; break;
+                case 'd': keys.d = true; break;
+                case 'j': keys.j = true; break;
+                case 'k': keys.k = true; break;
+                case 'l': keys.l = true; break;
+                
+                // 玩家2控制
+                case 'ArrowUp': keys.up = true; break;
+                case 'ArrowDown': keys.down = true; break;
+                case 'ArrowLeft': keys.left = true; break;
+                case 'ArrowRight': keys.right = true; break;
+                case '1': keys.num1 = true; break;
+                case '2': keys.num2 = true; break;
+                case '3': keys.num3 = true; break;
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            switch(e.key) {
+                // 玩家1控制
+                case 'w': keys.w = false; break;
+                case 's': keys.s = false; break;
+                case 'a': keys.a = false; break;
+                case 'd': keys.d = false; break;
+                case 'j': keys.j = false; break;
+                case 'k': keys.k = false; break;
+                case 'l': keys.l = false; break;
+                
+                // 玩家2控制
+                case 'ArrowUp': keys.up = false; break;
+                case 'ArrowDown': keys.down = false; break;
+                case 'ArrowLeft': keys.left = false; break;
+                case 'ArrowRight': keys.right = false; break;
+                case '1': keys.num1 = false; break;
+                case '2': keys.num2 = false; break;
+                case '3': keys.num3 = false; break;
+            }
+        });
+        
+        // 初始化游戏界面
+        initGame();
+    </script>
+</body>
+</html>

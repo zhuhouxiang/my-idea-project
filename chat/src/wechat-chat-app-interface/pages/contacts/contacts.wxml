@@ -1,0 +1,96 @@
+<!-- pages/contacts/contacts.wxml -->
+<view class="container">
+  <!-- 搜索栏 -->
+  <view class="search-bar">
+    <view class="search-input">
+      <i class="iconfont icon-search"></i>
+      <input placeholder="搜索好友" placeholder-class="placeholder" />
+    </view>
+  </view>
+  
+  <!-- 好友列表 -->
+  <scroll-view class="contacts-list" scroll-y>
+    <!-- 列表分组 -->
+    <view class="contacts-group">
+      <view class="group-title">常用联系人</view>
+      
+      <!-- 联系人项 -->
+      <view 
+        class="contact-item" 
+        wx:for="{{frequentlyContacts}}" 
+        wx:key="userId"
+        bindtap="goToChat"
+        data-userid="{{item.userId}}"
+        data-username="{{item.nickname}}"
+        data-avatar="{{item.avatarUrl}}"
+      >
+        <view class="avatar-container">
+          <image 
+            class="avatar" 
+            src="{{item.avatarUrl}}" 
+            mode="widthFix"
+          ></image>
+          <view class="online-indicator" wx:if="{{item.online}}"></view>
+        </view>
+        
+        <view class="contact-info">
+          <view class="name-container">
+            <text class="name">{{item.nickname}}</text>
+            <text class="time">{{item.lastMsgTime}}</text>
+          </view>
+          
+          <view class="last-msg-container">
+            <text class="last-msg">{{item.lastMsg}}</text>
+            <view class="unread-count" wx:if="{{item.unreadCount > 0}}">
+              {{item.unreadCount}}
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 所有联系人 -->
+    <view class="contacts-group">
+      <view class="group-title">所有联系人</view>
+      
+      <view 
+        class="contact-item" 
+        wx:for="{{allContacts}}" 
+        wx:key="userId"
+        bindtap="goToChat"
+        data-userid="{{item.userId}}"
+        data-username="{{item.nickname}}"
+        data-avatar="{{item.avatarUrl}}"
+      >
+        <view class="avatar-container">
+          <image 
+            class="avatar" 
+            src="{{item.avatarUrl}}" 
+            mode="widthFix"
+          ></image>
+          <view class="online-indicator" wx:if="{{item.online}}"></view>
+        </view>
+        
+        <view class="contact-info">
+          <view class="name-container">
+            <text class="name">{{item.nickname}}</text>
+            <text class="time">{{item.lastMsgTime}}</text>
+          </view>
+          
+          <view class="last-msg-container">
+            <text class="last-msg">{{item.lastMsg}}</text>
+            <view class="unread-count" wx:if="{{item.unreadCount > 0}}">
+              {{item.unreadCount}}
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+  
+  <!-- 添加好友按钮 -->
+  <view class="add-btn" bindtap="showAddMenu">
+    <i class="iconfont icon-add"></i>
+  </view>
+</view>
+    

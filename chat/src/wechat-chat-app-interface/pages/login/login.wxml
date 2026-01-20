@@ -1,0 +1,28 @@
+<!-- pages/login/login.wxml -->
+<view class="container">
+  <view class="login-box">
+    <view class="logo">
+      <image src="/images/logo.png" mode="widthFix"></image>
+      <text class="app-name">ChatPro</text>
+    </view>
+    
+    <view class="slogan">简单高效的即时通讯工具</view>
+    
+    <button 
+      class="login-btn" 
+      open-type="getUserInfo" 
+      bindgetuserinfo="onGetUserInfo"
+    >
+      <image src="/images/wechat.png" class="wechat-icon"></image>
+      微信快捷登录
+    </button>
+    
+    <view class="agreement">
+      登录即表示同意
+      <text class="link" bindtap="showAgreement">《用户协议》</text>
+      和
+      <text class="link" bindtap="showPrivacy">《隐私政策》</text>
+    </view>
+  </view>
+</view>
+    
